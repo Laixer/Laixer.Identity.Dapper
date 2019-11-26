@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -28,14 +29,16 @@ namespace Laixer.Identity.Dapper.Store
         protected IdentityDapperOptions _options;
 
         protected IQueryRepository DatabaseDriver { get => _options.Database.QueryRepository; }
+        private readonly ILogger logger;
 
         /// <summary>
         /// Creates a new instance of the store.
         /// </summary>
         /// <param name="context">The context used to access the store.</param>
-        public UserStore(IOptions<IdentityDapperOptions> options)
+        public UserStore(IOptions<IdentityDapperOptions> options, ILoggerFactory loggerFactory)
         {
             _options = options.Value;
+            logger = loggerFactory.CreateLogger(nameof(UserStore<TUser, TKey>));
 
             Helper.OrmMatchWithUnderscore(_options.MatchWithUnderscore);
         }
@@ -56,6 +59,7 @@ namespace Laixer.Identity.Dapper.Store
                     await statement(connection);
                 } catch (Exception e)
                 {
+                    logger.LogError($"Error while running database statement: {e.Message}");
                     throw e;
                 }
             }
@@ -74,7 +78,15 @@ namespace Laixer.Identity.Dapper.Store
         {
             using (var connection = _options.Database.GetDbConnection())
             {
-                return await statement(connection);
+                try
+                {
+                    return await statement(connection);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError($"Error while running database statement: {e.Message}");
+                    throw e;
+                }
             }
         }
 
