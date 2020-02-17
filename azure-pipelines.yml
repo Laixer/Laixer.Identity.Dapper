@@ -32,8 +32,13 @@ steps:
   inputs:
     command: 'pack'
     packagesToPack: '**/*.csproj'
-    versioningScheme: 'byBuildNumber'
-    includeSymbols: true
+    versioningScheme: 'off'
+
+- task: NuGetCommand@2
+  inputs:
+    command: 'custom'
+    arguments: 'pack ''**/*.csproj'' -Symbols -SymbolPackageFormat snupkg'
+
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
