@@ -19,6 +19,11 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>The <see cref="IdentityBuilder"/> instance this method extends.</returns>
         public static IdentityBuilder AddDapperStores(this IdentityBuilder builder, Action<IdentityDapperOptions> options)
         {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
             builder.Services.Configure(options);
 
             AddStores(builder.Services, builder.UserType, builder.RoleType);
