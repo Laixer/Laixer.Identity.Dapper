@@ -28,12 +28,11 @@ steps:
 #    projects: '**/*.csproj'
 #    arguments: '--configuration $(buildConfiguration)'
 
-- task: DotNetCoreCLI@2
+- task: NuGetCommand@2
   inputs:
-    command: 'publish'
-    publishWebProjects: false
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    command: 'pack'
+    packagesToPack: '**/*.csproj'
+    versioningScheme: 'off'
 
 - task: PublishBuildArtifacts@1
   inputs:
