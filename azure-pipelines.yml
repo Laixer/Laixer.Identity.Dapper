@@ -32,11 +32,8 @@ steps:
   inputs:
     command: 'pack'
     packagesToPack: '**/*.csproj'
-    majorVersion: '$(MajorVersion)'
-    minorVersion: '$(MinorVersion)'
-    patchVersion: '$(Build.BuildID)'
+    versioningScheme: 'byBuildNumber'
     includeSymbols: true
-
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
