@@ -35,7 +35,8 @@ steps:
     versioningScheme: 'byPrereleaseNumber'
     majorVersion: '$(MajorVersion)'
     minorVersion: '$(MinorVersion)'
-    patchVersion: '$(Rev:r)'
+    patchVersion: '$(BuildID)'
+    includeSymbols: true
 
 - task: PublishBuildArtifacts@1
   inputs:
