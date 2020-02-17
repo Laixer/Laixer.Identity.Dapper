@@ -52,16 +52,15 @@ namespace Laixer.Identity.Dapper.Store
         /// <param name="statement">Query method.</param>
         protected async Task RunDatabaseStatement(Func<IDbConnection, Task> statement)
         {
-            using (var connection = _options.Database.GetDbConnection())
+            try
             {
-                try
-                {
-                    await statement(connection);
-                } catch (Exception e)
-                {
-                    logger.LogError($"Error while running database statement: {e.Message}");
-                    throw e;
-                }
+                using var connection = _options.Database.GetDbConnection();
+                await statement(connection).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                logger.LogError($"Error while running database statement: {e.Message}");
+                throw;
             }
         }
 
@@ -76,17 +75,15 @@ namespace Laixer.Identity.Dapper.Store
         /// <returns>Value of type <typeparamref name="TReturn"/>.</returns>
         protected async Task<TReturn> RunDatabaseStatement<TReturn>(Func<IDbConnection, Task<TReturn>> statement)
         {
-            using (var connection = _options.Database.GetDbConnection())
+            try
             {
-                try
-                {
-                    return await statement(connection);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError($"Error while running database statement: {e.Message}");
-                    throw e;
-                }
+                using var connection = _options.Database.GetDbConnection();
+                return await statement(connection).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                logger.LogError($"Error while running database statement: {e.Message}");
+                throw;
             }
         }
 
@@ -97,7 +94,7 @@ namespace Laixer.Identity.Dapper.Store
         /// <param name="user">The user to create.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the creation operation.</returns>
-        public Task<IdentityResult> CreateAsync(TUser user, CancellationToken cancellationToken)
+        public async Task<IdentityResult> CreateAsync(TUser user, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -106,11 +103,19 @@ namespace Laixer.Identity.Dapper.Store
                 throw new ArgumentNullException(nameof(user));
             }
 
-            // NOTE: We'll always report success, an exception will take care of faults.
-            return RunDatabaseStatement(async connection =>
+            try
             {
-                user.Id = await connection.ExecuteScalarAsync<TKey>(DatabaseDriver.CreateAsync, user);
-            }).ContinueWith(_ => IdentityResult.Success);
+                await RunDatabaseStatement(async connection =>
+                {
+                    user.Id = await connection.ExecuteScalarAsync<TKey>(DatabaseDriver.CreateAsync, user).ConfigureAwait(false);
+                }).ConfigureAwait(false);
+
+                return IdentityResult.Success;
+            }
+            catch (Exception e) // TODO:
+            {
+                return IdentityResult.Failed(new IdentityError { Description = e.Message }); // FUTURE: We can likely do better.
+            }
         }
 
         /// <summary>
@@ -128,13 +133,19 @@ namespace Laixer.Identity.Dapper.Store
                 throw new ArgumentNullException(nameof(user));
             }
 
-            // NOTE: We'll always report success, an exception will take care of faults.
-            await RunDatabaseStatement(connection =>
+            try
             {
-                return connection.ExecuteAsync(DatabaseDriver.UpdateAsync, user);
-            });
+                await RunDatabaseStatement(connection =>
+                {
+                    return connection.ExecuteAsync(DatabaseDriver.UpdateAsync, user);
+                }).ConfigureAwait(false);
 
-            return IdentityResult.Success;
+                return IdentityResult.Success;
+            }
+            catch (Exception e) // TODO:
+            {
+                return IdentityResult.Failed(new IdentityError { Description = e.Message }); // FUTURE: We can likely do better.
+            }
         }
 
         /// <summary>
@@ -143,7 +154,7 @@ namespace Laixer.Identity.Dapper.Store
         /// <param name="user">The user to delete.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the update operation.</returns>
-        public Task<IdentityResult> DeleteAsync(TUser user, CancellationToken cancellationToken)
+        public async Task<IdentityResult> DeleteAsync(TUser user, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -152,11 +163,19 @@ namespace Laixer.Identity.Dapper.Store
                 throw new ArgumentNullException(nameof(user));
             }
 
-            // NOTE: We'll always report success, an exception will take care of faults.
-            return RunDatabaseStatement(connection =>
+            try
             {
-                return connection.ExecuteAsync(DatabaseDriver.DeleteAsync, user);
-            }).ContinueWith(_ => IdentityResult.Success);
+                await RunDatabaseStatement(connection =>
+                {
+                    return connection.ExecuteAsync(DatabaseDriver.DeleteAsync, user);
+                }).ConfigureAwait(false);
+
+                return IdentityResult.Success;
+            }
+            catch (Exception e) // TODO:
+            {
+                return IdentityResult.Failed(new IdentityError { Description = e.Message }); // FUTURE: We can likely do better.
+            }
         }
 
         /// <summary>
@@ -604,7 +623,7 @@ namespace Laixer.Identity.Dapper.Store
         /// <param name="user">The user whose roles should be retrieved.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>A <see cref="Task{TResult}"/> that contains the roles the user is a member of.</returns>
-        public Task<IList<string>> GetRolesAsync(TUser user, CancellationToken cancellationToken)
+        public async Task<IList<string>> GetRolesAsync(TUser user, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -613,10 +632,12 @@ namespace Laixer.Identity.Dapper.Store
                 throw new ArgumentNullException(nameof(user));
             }
 
-            return RunDatabaseStatement(connection =>
+            var list = await RunDatabaseStatement(connection =>
             {
                 return connection.QueryAsync<string>(DatabaseDriver.GetRolesAsync, new { user.Id });
-            }).ContinueWith<IList<string>>(t => t.Result.AsList());
+            }).ConfigureAwait(false);
+
+            return list.AsList();
         }
 
         /// <summary>
@@ -627,7 +648,7 @@ namespace Laixer.Identity.Dapper.Store
         /// <returns>
         /// The <see cref="Task"/> contains a list of users, if any, that are in the specified role.
         /// </returns>
-        public Task<IList<TUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
+        public async Task<IList<TUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -636,10 +657,12 @@ namespace Laixer.Identity.Dapper.Store
                 throw new ArgumentNullException(nameof(roleName));
             }
 
-            return RunDatabaseStatement(connection =>
+            var list = await RunDatabaseStatement(connection =>
             {
                 return connection.QueryAsync<TUser>(DatabaseDriver.GetUsersInRoleAsync, new { Role = roleName });
-            }).ContinueWith<IList<TUser>>(t => t.Result.AsList());
+            }).ConfigureAwait(false);
+
+            return list as IList<TUser>;
         }
 
         /// <summary>
@@ -659,7 +682,9 @@ namespace Laixer.Identity.Dapper.Store
                 throw new ArgumentNullException(nameof(user));
             }
 
-            return (await GetRolesAsync(user, cancellationToken)).Contains(roleName);
+            var roles = await GetRolesAsync(user, cancellationToken).ConfigureAwait(false);
+
+            return roles.Contains(roleName);
         }
 
         /// <summary>
