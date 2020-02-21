@@ -12,6 +12,19 @@ using System.Threading.Tasks;
 namespace Laixer.Identity.Dapper.Store
 {
     /// <summary>
+    /// Represents a new instance of a persistence store for the specified user with default key type.
+    /// </summary>
+    /// <typeparam name="TUser">The type representing a user.</typeparam>
+    internal class UserStore<TUser> : UserStore<TUser, string>
+        where TUser : IdentityUser
+    {
+        public UserStore(IOptions<IdentityDapperOptions> options, ILoggerFactory loggerFactory)
+            : base(options, loggerFactory)
+        {
+        }
+    }
+
+    /// <summary>
     /// Represents a new instance of a persistence store for the specified user.
     /// </summary>
     /// <typeparam name="TUser">The type representing a user.</typeparam>

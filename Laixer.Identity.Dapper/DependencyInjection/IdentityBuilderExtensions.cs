@@ -33,9 +33,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <summary>
         /// Add custom user and role store to the service collection.
         /// </summary>
-        /// <param name="services"></param>
-        /// <param name="userType"></param>
-        /// <param name="roleType"></param>
+        /// <param name="services">See c<see cref="IServiceCollection"/>.</param>
+        /// <param name="userType">User type for <see cref="IdentityUser"/>.</param>
+        /// <param name="roleType">Role type for <see cref="IdentityRole"/>.</param>
         private static void AddStores(IServiceCollection services, Type userType, Type roleType)
         {
             var identityUserType = FindGenericBaseType(userType, typeof(IdentityUser<>));
