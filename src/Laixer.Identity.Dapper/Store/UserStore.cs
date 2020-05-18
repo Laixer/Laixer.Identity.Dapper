@@ -60,7 +60,7 @@ namespace Laixer.Identity.Dapper.Store
                 } catch (Exception e)
                 {
                     logger.LogError($"Error while running database statement: {e.Message}");
-                    throw e;
+                    throw;
                 }
             }
         }
@@ -97,7 +97,7 @@ namespace Laixer.Identity.Dapper.Store
         /// <param name="user">The user to create.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the <see cref="IdentityResult"/> of the creation operation.</returns>
-        public Task<IdentityResult> CreateAsync(TUser user, CancellationToken cancellationToken)
+        public async Task<IdentityResult> CreateAsync(TUser user, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -107,10 +107,18 @@ namespace Laixer.Identity.Dapper.Store
             }
 
             // NOTE: We'll always report success, an exception will take care of faults.
-            return RunDatabaseStatement(async connection =>
+            try
             {
-                user.Id = await connection.ExecuteScalarAsync<TKey>(DatabaseDriver.CreateAsync, user);
-            }).ContinueWith(_ => IdentityResult.Success);
+                await RunDatabaseStatement(async connection =>
+                {
+                    user.Id = await connection.ExecuteScalarAsync<TKey>(DatabaseDriver.CreateAsync, user);
+                });
+            } catch (Exception e)
+            {
+                return IdentityResult.Failed(new IdentityError { Description = e.Message });
+            }
+
+            return IdentityResult.Success;
         }
 
         /// <summary>
