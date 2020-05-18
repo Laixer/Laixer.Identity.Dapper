@@ -1,4 +1,6 @@
-﻿namespace Laixer.Identity.Dapper.Extensions
+﻿using System;
+
+namespace Laixer.Identity.Dapper.Extensions
 {
     /// <summary>
     /// NpgsqIdentityDapperOptions extensions.
@@ -76,6 +78,11 @@
             string roleTable,
             ICustomQueryRepository customQueryRepository)
         {
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
             options.ConnectionString = connectionString;
             options.Schema = schema ?? options.Schema;
             options.UserTable = userTable ?? options.UserTable;
